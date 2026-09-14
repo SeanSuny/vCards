@@ -15,13 +15,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   - 图标优先使用 512x512px（≤50KB），也支持 200x200px（≤20KB）的 PNG 格式
 
 ### 构建系统
-- 使用 Gulp 作为构建工具，配置文件在 `src/gulpfile.js`
+- 使用纯 Node 脚本作为构建工具，配置文件在 `src/build.js`
 - 两个主要的生成流程：
-  - `generator` - 标准 vCard 生成，过滤 106 开头的长号码（超过11位）
-  - `generator_ext` - 扩展版本，保留所有号码并添加 git 历史时间戳
+  - `generator` - 标准 vCard 生成
+  - `generator_ext` - 扩展版本，添加 git 历史时间戳
 - 支持生成分类文件夹和汇总文件
 - 支持生成 Radicale CardDAV 服务所需的文件结构
-- 网页版本构建：`buildWeb` - 生成可浏览的网页界面
 
 ### 插件系统
 - `src/plugins/vcard.js` - 标准 vCard 生成插件
@@ -43,49 +42,14 @@ npm run build
 
 # 构建 CardDAV 服务版本
 npm run radicale
-
-# 构建网页版本
-npm run build:web
-
-# 启动网页开发服务器
-npm run dev:web
-# 或单独启动服务器
-npm run serve:web
-```
-
-### Gulp 任务
-```bash
-# 生成 vCard 文件到 temp 目录
-npm run gulp generator
-
-# 生成扩展版本 vCard（保留所有号码）
-npm run gulp generator_ext
-
-# 生成分类汇总文件
-npm run gulp combine
-
-# 生成总汇总文件
-npm run gulp allinone
-
-# 创建压缩包
-npm run gulp archive
-
-# 完整构建流程
-npm run gulp build
-
-# CardDAV 服务构建
-npm run gulp radicale
-
-# 网页版本构建
-npm run gulp buildWeb
 ```
 
 ## 数据验证和规范
 
 ### Schema 验证
-- 使用 Joi 进行数据验证，配置在 `src/const/schema.js`
-- 电话号码使用 `google-libphonenumber` 进行验证
-- 支持中国区号格式和国际格式
+- 使用 Zod 进行数据验证，配置在 `src/const/schema.js`
+- 电话号码使用 Zod 的 `z.e164()` 校验，未带 `+` 的号码自动补 `+86`
+- 支持中国区号格式和国际格式（带 `+` 的保持原区号）
 
 ### 测试规范
 - 图标必须是合法的 PNG 格式（优先 512x512px ≤50KB，也支持 200x200px ≤20KB）
@@ -100,12 +64,12 @@ npm run gulp buildWeb
    - `basic.cellPhone` - 电话号码数组
    - `basic.url` - 官网链接（可选）
    - `basic.workEmail` - 邮箱数组（可选）
+   - `basic` 至少包含 `cellPhone`、`workEmail`、`url` 之一
 
 ## 特殊处理
 
-### 电话号码过滤
-- 标准版本会过滤掉 106 开头的长号码（超过11位）
-- 扩展版本保留所有号码
+### 电话号码收录
+- 数据不收录 106 开头的短信推送长号码（超过11位）
 
 ### 中文支持
 - 自动生成拼音字段用于通讯录排序
@@ -122,29 +86,12 @@ npm run gulp buildWeb
 - `public/archive.zip` - 打包的发布文件
 - `radicale/ios/` - iOS CardDAV 服务文件，按分类分文件夹
 - `radicale/macos/全部/` - macOS CardDAV 服务文件，所有联系人在一个文件夹
-- `public-web/` - 网页版本输出目录，包含 HTML、CSS、JS 和资源文件
-
-## 网页版本
-
-### 开发服务器
-- 使用 `src/serve.js` 作为开发服务器
-- 默认运行在 `http://localhost:3000`
-- 支持热重载和静态文件服务
-- 自动设置正确的 MIME 类型，包括 `.vcf` 文件
-
-### 构建流程
-- `buildWeb` 任务会：
-  1. 读取所有 YAML 数据文件
-  2. 生成 JSON 数据注入到网页模板
-  3. 复制图标文件到 `public-web/icons/`
-  4. 复制 VCF 文件到 `public-web/vcf/`
-  5. 生成完整的网页界面
 
 ## 关键技术细节
 
 ### vCard 生成差异
-- **标准版本** (`vcard.js`)：过滤 106 开头的长号码，适用于一般用户
-- **扩展版本** (`vcard-ext.js`)：保留所有号码，添加 REV 和 UID 字段，适用于 CardDAV
+- **标准版本** (`vcard.js`)：适用于一般用户
+- **扩展版本** (`vcard-ext.js`)：添加 REV 和 UID 字段，适用于 CardDAV
 
 ### Git 时间戳集成
 - 扩展版本使用 `git log` 获取文件最后修改时间
@@ -162,8 +109,7 @@ npm run gulp buildWeb
 - 图标设计规范：圆形 140x140px，正方形 120x120px，长方形 160x80px
 - 所有文本编码使用 UTF-8
 - 项目使用 ES 模块语法（`"type": "module"`）
-- 网页版本需要先运行 `generator` 生成 VCF 文件
-- CardDAV 版本使用 `generator_ext` 确保包含完整的元数据
+- CardDAV 版本使用 `npm run radicale` 确保包含完整的元数据
 
 ## 图标标准化处理
 
